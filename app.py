@@ -81,20 +81,81 @@ if st.button("🔮 Predict Churn", use_container_width=True):
     probabilities = model.predict_proba(df)[0]
     churn_prob = probabilities[1] * 100
     stay_prob = probabilities[0] * 100
+    
+    # Calculate churn probability as decimal for categorization
+    churn_prob_decimal = probabilities[1]
+    
+    # Determine risk category
+    if churn_prob_decimal < 0.3:
+        risk_category = "Low Churn Risk"
+        risk_color = "🟢"
+        risk_style = "success"
+    elif churn_prob_decimal <= 0.7:
+        risk_category = "Medium Churn Risk"
+        risk_color = "🟡"
+        risk_style = "warning"
+    else:
+        risk_category = "High Churn Risk"
+        risk_color = "🔴"
+        risk_style = "error"
+
+    # Display risk category prominently
+    if risk_style == "success":
+        st.success(f"{risk_color} **{risk_category.upper()}**")
+    elif risk_style == "warning":
+        st.warning(f"{risk_color} **{risk_category.upper()}**")
+    else:
+        st.error(f"{risk_color} **{risk_category.upper()}**")
 
     col1, col2 = st.columns(2)
+    
     with col1:
-        if prediction == 1:
-            st.error("⚠️ **HIGH CHURN RISK**")
-            st.metric("Churn Probability", f"{churn_prob:.1f}%")
-        else:
-            st.success("✅ **LOW CHURN RISK**")
-            st.metric("Stay Probability", f"{stay_prob:.1f}%")
+        st.metric("Churn Probability", f"{churn_prob:.1f}%")
+        st.metric("Stay Probability", f"{stay_prob:.1f}%")
+        
+        # Risk breakdown
+        st.markdown("**Risk Categories:**")
+        st.markdown("🟢 Low: < 30%")
+        st.markdown("🟡 Medium: 30-70%")
+        st.markdown("🔴 High: > 70%")
 
     with col2:
+        # Probability bar chart
         chart_data = pd.DataFrame({'Probability': [churn_prob, stay_prob]},
                                   index=['Churn', 'Stay'])
         st.bar_chart(chart_data)
+        
+        # Risk gauge visualization - Single progress bar
+        st.markdown("**Churn Risk Meter**")
+        st.progress(churn_prob_decimal)
+        
+        # Visual risk zones indicator
+        st.markdown("**Current Risk Level**")
+        
+        # Create colored boxes to show risk zones
+        risk_zones = f"""
+        <div style='display: flex; gap: 10px; margin-top: 10px;'>
+            <div style='flex: 3; background-color: {"#90EE90" if churn_prob_decimal < 0.3 else "#E8E8E8"}; 
+                        padding: 15px; border-radius: 5px; text-align: center; 
+                        border: {"3px solid #228B22" if churn_prob_decimal < 0.3 else "1px solid #CCC"};'>
+                <strong>🟢 LOW</strong><br/>
+                <small>0-30%</small>
+            </div>
+            <div style='flex: 4; background-color: {"#FFD700" if 0.3 <= churn_prob_decimal <= 0.7 else "#E8E8E8"}; 
+                        padding: 15px; border-radius: 5px; text-align: center;
+                        border: {"3px solid #FFA500" if 0.3 <= churn_prob_decimal <= 0.7 else "1px solid #CCC"};'>
+                <strong>🟡 MEDIUM</strong><br/>
+                <small>30-70%</small>
+            </div>
+            <div style='flex: 3; background-color: {"#FF6B6B" if churn_prob_decimal > 0.7 else "#E8E8E8"}; 
+                        padding: 15px; border-radius: 5px; text-align: center;
+                        border: {"3px solid #DC143C" if churn_prob_decimal > 0.7 else "1px solid #CCC"};'>
+                <strong>🔴 HIGH</strong><br/>
+                <small>70-100%</small>
+            </div>
+        </div>
+        """
+        st.markdown(risk_zones, unsafe_allow_html=True)
 
     # Step 4: Explanation using Groq
     st.markdown("---")
@@ -114,10 +175,12 @@ if st.button("🔮 Predict Churn", use_container_width=True):
 
     # Optional Recommendation
     st.markdown("---")
-    if prediction == 1:
-        st.warning("💡 Recommendation: Contact customer for retention")
+    if risk_category == "High Churn Risk":
+        st.error("💡 **Urgent Action Required**: Immediate customer retention intervention needed")
+    elif risk_category == "Medium Churn Risk":
+        st.warning("💡 **Recommendation**: Monitor customer and consider proactive engagement")
     else:
-        st.info("💡 Recommendation: Customer is stable")
+        st.success("💡 **Recommendation**: Customer is stable, maintain regular service quality")
 
 # Footer
 st.markdown("---")
